@@ -3,10 +3,16 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 const symbols = ["🍒", "🍋", "🍇", "🔔", "💎"];
+const maxPaylines = 25;
+
+// Define some sample paylines as combinations of positions
+// This example assumes 5 reels and 3 rows.
 const paylines = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8]
+  [0, 1, 2, 3, 4], // Horizontal line across the middle
+  [5, 6, 7, 8, 9], // Top row
+  [10, 11, 12, 13, 14], // Bottom row
+  // Add more paylines as desired, up to 25
+  // Diagonals and other combinations...
 ];
 
 function getRandomSymbol() {
@@ -14,14 +20,17 @@ function getRandomSymbol() {
 }
 
 const SlotGame = () => {
-  const [reels, setReels] = useState([["", "", ""], ["", "", ""], ["", "", ""]]);
-  const [bet, setBet] = useState(1);
+  const [reels, setReels] = useState(Array(5).fill(Array(3).fill("")));
+  const [paylineCount, setPaylineCount] = useState(1);
+  const [betPerLine, setBetPerLine] = useState(1);
   const [result, setResult] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [winningLines, setWinningLines] = useState([]);
 
+  // Spin reels
   const spinReels = () => {
     setIsSpinning(true);
-    const newReels = reels.map(reel => reel.map(getRandomSymbol));
+    const newReels = reels.map(() => Array(3).fill().map(getRandomSymbol));
     setTimeout(() => {
       setReels(newReels);
       checkWin(newReels);
@@ -29,16 +38,26 @@ const SlotGame = () => {
     }, 1500);
   };
 
+  // Check for winning paylines
   const checkWin = (reels) => {
-    const win = paylines.some(line => {
-      const [a, b, c] = line.map(idx => reels[Math.floor(idx / 3)][idx % 3]);
-      return a === b && b === c;
+    const activePaylines = paylines.slice(0, paylineCount);
+    let winLines = [];
+    activePaylines.forEach((line, index) => {
+      const [a, b, c, d, e] = line.map(pos => reels[Math.floor(pos / 3)][pos % 3]);
+      if (a === b && b === c && c === d && d === e) {
+        winLines.push(index);
+      }
     });
-    setResult(win ? `You won ${bet * 10} coins!` : 'No win. Try again!');
+    setWinningLines(winLines);
+    setResult(winLines.length > 0 ? `You won ${winLines.length * betPerLine * 10} coins!` : 'No win. Try again!');
+  };
+
+  const handlePaylineChange = (e) => {
+    setPaylineCount(Math.min(parseInt(e.target.value), maxPaylines));
   };
 
   const handleBetChange = (e) => {
-    setBet(parseInt(e.target.value));
+    setBetPerLine(parseInt(e.target.value));
   };
 
   return (
@@ -52,7 +71,9 @@ const SlotGame = () => {
                 key={j}
                 animate={{ y: isSpinning ? [-20, 20, -20, 0] : 0 }}
                 transition={{ duration: 0.5, repeat: isSpinning ? Infinity : 0 }}
-                className="text-2xl border-2 border-gray-300 rounded-lg p-4 mb-2 w-16 h-16 flex items-center justify-center"
+                className={`text-2xl border-2 border-gray-300 rounded-lg p-4 mb-2 w-16 h-16 flex items-center justify-center ${
+                  winningLines.includes(i) ? "bg-green-300" : ""
+                }`}
               >
                 {symbol}
               </motion.div>
@@ -62,16 +83,21 @@ const SlotGame = () => {
       </div>
       <div className="mb-4">
         <label className="text-lg font-medium">
-          Bet:
-          <select
-            onChange={handleBetChange}
-            value={bet}
-            disabled={isSpinning}
-            className="ml-2 p-1 border rounded-lg bg-white text-lg"
-          >
-            <option value="1">1</option>
-            <option value="5">5</option>
-            <option value="10">10</option>
+          Paylines:
+          <select onChange={handlePaylineChange} value={paylineCount} disabled={isSpinning} className="ml-2 p-1 border rounded-lg bg-white text-lg">
+            {[...Array(maxPaylines).keys()].map(i => (
+              <option key={i} value={i + 1}>{i + 1}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="mb-4">
+        <label className="text-lg font-medium">
+          Bet per Line:
+          <select onChange={handleBetChange} value={betPerLine} disabled={isSpinning} className="ml-2 p-1 border rounded-lg bg-white text-lg">
+            {[1, 5, 10].map(bet => (
+              <option key={bet} value={bet}>{bet}</option>
+            ))}
           </select>
         </label>
       </div>
